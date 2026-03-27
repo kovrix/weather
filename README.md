@@ -116,6 +116,31 @@ npm start
 # then press i for iOS or a for Android in the Expo terminal
 ```
 
+## App Preview
+
+Add screenshots to `assets/screenshots/` and they will render on GitHub.
+
+### Capture Screenshots
+
+- iOS Simulator (macOS, CLI):
+
+```bash
+xcrun simctl io booted screenshot assets/screenshots/home-ios.png
+```
+
+- Android Emulator (CLI):
+
+```bash
+adb exec-out screencap -p > assets/screenshots/home-android.png
+```
+
+### Embedded Images
+
+If the files exist at those paths, GitHub README will show them automatically:
+
+![Weather app iOS preview](assets/screenshots/home-ios.png)
+![Weather app Android preview](assets/screenshots/home-android.png)
+
 ## Persistence Design
 
 - Weather preferences use Zustand `persist` middleware with Expo-compatible AsyncStorage.
