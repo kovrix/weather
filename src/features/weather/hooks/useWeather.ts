@@ -22,6 +22,7 @@ export function useWeather(options: UseWeatherOptions = {}) {
   const weatherQuery = useQuery({
     queryKey: ["weather", selectedProvider, lastSearchedLocation],
     queryFn: () => provider.getWeather({ location: lastSearchedLocation }),
+    placeholderData: (previousData) => previousData,
     enabled: hasHydrated && Boolean(lastSearchedLocation),
     staleTime: 1000 * 60 * 5,
     retry: 0,
