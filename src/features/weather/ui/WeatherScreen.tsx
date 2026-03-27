@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -48,6 +48,10 @@ export function WeatherScreen({
     [selectedProvider],
   );
   const { weatherQuery } = useWeather({ registry });
+
+  useEffect(() => {
+    setLocationInput(lastSearchedLocation);
+  }, [lastSearchedLocation]);
 
   const handleSubmit = () => {
     const result = parseLocationInput(locationInput);
@@ -127,9 +131,6 @@ export function WeatherScreen({
           </View>
 
           <View style={styles.sectionSpacing}>
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
-              Forecast
-            </Text>
             {!hasSearched ? (
               <View
                 style={[styles.stateCard, { backgroundColor: theme.surface }]}
