@@ -118,8 +118,10 @@ npm start
 
 ### Embedded Images
 
-![Weather app iOS preview Open-Meteo](assets/screenshots/ios-sim-open-meteo.png)
-![Weather app iOS preview wttr.in](assets/screenshots/ios-sim-open-wttr.png)
+<p align="center">
+    <img src="assets/screenshots/ios-sim-open-meteo.png" alt="Weather app iOS preview Open-Meteo" width="44%" />
+    <img src="assets/screenshots/ios-sim-wttr.png" alt="Weather app iOS preview wttr.in" width="44%" />
+</p>
 
 ## Persistence Design
 
