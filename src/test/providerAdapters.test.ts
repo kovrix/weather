@@ -34,7 +34,7 @@ describe("weather adapters", () => {
         }),
       });
 
-    global.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const adapter = new OpenMeteoAdapter();
     const weather = await adapter.getWeather({ location: "Berlin" });
@@ -73,7 +73,7 @@ describe("weather adapters", () => {
       }),
     });
 
-    global.fetch = fetchMock as unknown as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const adapter = new WttrAdapter();
     const weather = await adapter.getWeather({ location: "London" });
@@ -83,7 +83,7 @@ describe("weather adapters", () => {
       locationName: "London, United Kingdom",
       temperatureCelsius: 11,
       weatherCondition: "Light rain",
-      icon: "https://cdn.example.com/rain.png",
+      icon: "🌧️",
       humidity: 70,
       windSpeedKph: 14,
     });
