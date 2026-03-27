@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "Weather Provider App",
+    "name": "Weather",
     "slug": "weather-provider-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/screenshots/weather.png",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
-      "bundleIdentifier": "com.anonymous.weather-provider-app"
+      "bundleIdentifier": "com.anonymous.weather-provider-app",
+      "bundleDisplayName": "Weather",
+      "icon": "./assets/screenshots/weather.png",
+      "supportsTabletMode": true
     },
     "android": {
       "package": "com.anonymous.weatherproviderapp"

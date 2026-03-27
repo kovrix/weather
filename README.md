@@ -118,7 +118,8 @@ npm start
 
 ### Embedded Images
 
-![Weather app iOS preview](assets/screenshots/weather-ios.png)
+![Weather app iOS preview Open-Meteo](assets/screenshots/ios-sim-open-meteo.png)
+![Weather app iOS preview wttr.in](assets/screenshots/ios-sim-open-wttr.png)
 
 ## Persistence Design
 
