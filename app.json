@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Weather Provider App",
+    "slug": "weather-provider-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "bundleIdentifier": "com.anonymous.weather-provider-app"
+    },
+    "android": {
+      "package": "com.anonymous.weatherproviderapp"
+    },
+    "plugins": [
+      "expo-asset"
+    ]
+  }
+}
