@@ -10,6 +10,7 @@ type UseWeatherOptions = {
 
 export function useWeather(options: UseWeatherOptions = {}) {
   const registry = options.registry ?? weatherProviderRegistry;
+  const hasHydrated = useWeatherPreferencesStore((state) => state.hasHydrated);
   const selectedProvider = useWeatherPreferencesStore(
     (state) => state.selectedProvider,
   );
@@ -21,7 +22,7 @@ export function useWeather(options: UseWeatherOptions = {}) {
   const weatherQuery = useQuery({
     queryKey: ["weather", selectedProvider, lastSearchedLocation],
     queryFn: () => provider.getWeather({ location: lastSearchedLocation }),
-    enabled: Boolean(lastSearchedLocation),
+    enabled: hasHydrated && Boolean(lastSearchedLocation),
     staleTime: 1000 * 60 * 5,
     retry: 0,
   });

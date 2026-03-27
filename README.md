@@ -2,6 +2,14 @@
 
 Production-style Expo + React Native weather app with modular provider adapters, Zustand state, TanStack Query server state, Zod validation, and Jest coverage.
 
+## Persistence Design
+
+- Weather preferences use Zustand `persist` middleware with Expo-compatible AsyncStorage.
+- Only `selectedProvider` and `lastSearchedLocation` are persisted to keep storage minimal and explicit.
+- The app triggers store hydration on startup in `AppProviders`, not in UI components.
+- Weather fetching remains provider-agnostic: `useWeather` still reads provider adapters from the registry and only enables queries after store hydration, preventing unnecessary duplicate startup fetches.
+- If a persisted location exists, the app automatically fetches weather for that location with the persisted provider after hydration.
+
 ## File Tree
 
 ```text
