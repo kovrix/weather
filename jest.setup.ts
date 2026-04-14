@@ -1,5 +1,22 @@
 import { act } from "@testing-library/react-native";
 
+jest.mock("expo-network", () => ({
+  getNetworkStateAsync: jest.fn().mockResolvedValue({ isConnected: true }),
+}));
+
+jest.mock("expo-location", () => ({
+  requestForegroundPermissionsAsync: jest
+    .fn()
+    .mockResolvedValue({ status: "granted" }),
+  getCurrentPositionAsync: jest.fn().mockResolvedValue({
+    coords: { latitude: 0, longitude: 0 },
+  }),
+  reverseGeocodeAsync: jest
+    .fn()
+    .mockResolvedValue([{ city: "London", region: null, country: "UK" }]),
+  Accuracy: { Balanced: 3 },
+}));
+
 jest.mock("@react-native-async-storage/async-storage", () => {
   const storage = new Map<string, string>();
 

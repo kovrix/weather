@@ -56,7 +56,7 @@ describe("useWeather", () => {
     act(() => {
       const state = useWeatherPreferencesStore.getState();
       state.setSelectedProvider("wttr");
-      state.setLastSearchedLocation("Lisbon");
+      state.setLastSearchedLocation("Lisbon", "Lisbon");
       state.setHasHydrated(false);
     });
 
@@ -125,7 +125,7 @@ describe("useWeather", () => {
     act(() => {
       const state = useWeatherPreferencesStore.getState();
       state.setHasHydrated(true);
-      state.setLastSearchedLocation("Lisbon");
+      state.setLastSearchedLocation("Lisbon", "Lisbon");
     });
 
     const { result } = renderHook(() => useWeather({ registry }), {

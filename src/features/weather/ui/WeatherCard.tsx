@@ -5,10 +5,15 @@ import { MetricPill } from "@/components/MetricPill";
 import type { WeatherData } from "../model/types";
 import type { ProviderTheme } from "@/theme/providerThemes";
 import { getWeatherIconName } from "@/utils/weatherIcons";
+import {
+  formatTemperature,
+  type TemperatureUnit,
+} from "@/utils/temperature";
 
 type WeatherCardProps = {
   weather: WeatherData;
   theme: ProviderTheme;
+  temperatureUnit: TemperatureUnit;
   isRefreshing?: boolean;
 };
 
@@ -19,6 +24,7 @@ function formatMetric(value: number | null, suffix: string) {
 export function WeatherCard({
   weather,
   theme,
+  temperatureUnit,
   isRefreshing = false,
 }: WeatherCardProps) {
   const remoteIcon = weather.icon.startsWith("http");
@@ -49,7 +55,7 @@ export function WeatherCard({
 
       <View style={styles.temperatureRow}>
         <Text style={[styles.temperature, { color: theme.textPrimary }]}>
-          {Math.round(weather.temperatureCelsius)}°C
+          {formatTemperature(weather.temperatureCelsius, temperatureUnit)}
         </Text>
         <View
           style={[styles.providerBadge, { backgroundColor: theme.accentSoft }]}
