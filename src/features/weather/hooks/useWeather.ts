@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { weatherProviderRegistry } from "../api/providerRegistry";
 import type { WeatherProviderRegistry } from "../model/provider";
-import { useWeatherPreferencesStore } from "../../../store/weatherPreferencesStore";
+import { useWeatherPreferencesStore } from "@/store/weatherPreferencesStore";
 
 type UseWeatherOptions = {
   registry?: WeatherProviderRegistry;

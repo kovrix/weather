@@ -4,7 +4,11 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
-    "types": ["jest", "react", "react-native"]
+    "types": ["jest", "react", "react-native"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["App.tsx", "src", "jest.setup.ts"]
 }

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import type { ProviderTheme } from "../../../theme/providerThemes";
+import type { ProviderTheme } from "@/theme/providerThemes";
 import {
   WEATHER_PROVIDER_OPTIONS,
   type WeatherProviderId,

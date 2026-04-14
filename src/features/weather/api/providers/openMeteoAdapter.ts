@@ -1,5 +1,5 @@
-import { fetchJson } from "../../../../utils/fetchJson";
-import type { WeatherProvider } from "../../model/provider";
+import { fetchJson } from "@/utils/fetchJson";
+import type { WeatherProvider } from "@/features/weather/model/provider";
 import {
   mapOpenMeteoResponse,
   type OpenMeteoForecastResponse,

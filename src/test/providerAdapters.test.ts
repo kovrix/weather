@@ -1,5 +1,5 @@
-import { OpenMeteoAdapter } from "../features/weather/api/providers/openMeteoAdapter";
-import { WttrAdapter } from "../features/weather/api/providers/wttrAdapter";
+import { OpenMeteoAdapter } from "@/features/weather/api/providers/openMeteoAdapter";
+import { WttrAdapter } from "@/features/weather/api/providers/wttrAdapter";
 
 describe("weather adapters", () => {
   afterEach(() => {

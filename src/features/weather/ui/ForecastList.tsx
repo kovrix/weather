@@ -2,8 +2,8 @@ import { StyleSheet, Text, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
 import type { ForecastDay } from "../model/types";
-import type { ProviderTheme } from "../../../theme/providerThemes";
-import { getWeatherIconName } from "../../../utils/weatherIcons";
+import type { ProviderTheme } from "@/theme/providerThemes";
+import { getWeatherIconName } from "@/utils/weatherIcons";
 
 type ForecastListProps = {
   forecast?: ForecastDay[];
