@@ -1,4 +1,5 @@
 import type { WeatherData } from "../../model/types";
+import { mapConditionToEmoji } from "../../../../utils/weatherIcons";
 
 export type WttrResponse = {
   current_condition: Array<{
@@ -22,17 +23,6 @@ export type WttrResponse = {
   }>;
 };
 
-function mapConditionToIcon(condition: string): string {
-  const lower = condition.toLowerCase();
-  if (lower.includes("thunder")) return "⛈️";
-  if (lower.includes("snow")) return "🌨️";
-  if (lower.includes("rain") || lower.includes("drizzle")) return "🌧️";
-  if (lower.includes("fog") || lower.includes("mist")) return "🌫️";
-  if (lower.includes("cloud") || lower.includes("overcast")) return "☁️";
-  if (lower.includes("clear") || lower.includes("sun")) return "☀️";
-  return "⛅";
-}
-
 export function mapWttrResponse(
   response: WttrResponse,
 ): Omit<WeatherData, "provider"> {
@@ -52,7 +42,7 @@ export function mapWttrResponse(
     locationName: locationParts.join(", "),
     temperatureCelsius: Number(current.temp_C),
     weatherCondition: current.weatherDesc[0]?.value ?? "Unknown conditions",
-    icon: mapConditionToIcon(current.weatherDesc[0]?.value ?? ""),
+    icon: mapConditionToEmoji(current.weatherDesc[0]?.value ?? ""),
     humidity: Number(current.humidity),
     windSpeedKph: Number(current.windspeedKmph),
     fetchedAt: new Date().toISOString(),
@@ -66,7 +56,7 @@ export function mapWttrResponse(
         temperatureMaxCelsius: Number(day.maxtempC),
         temperatureMinCelsius: Number(day.mintempC),
         weatherCondition: condition,
-        icon: mapConditionToIcon(condition),
+        icon: mapConditionToEmoji(condition),
       };
     });
   }
