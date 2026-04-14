@@ -4,13 +4,22 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import type { ForecastDay } from "../model/types";
 import type { ProviderTheme } from "@/theme/providerThemes";
 import { getWeatherIconName } from "@/utils/weatherIcons";
+import {
+  formatTemperatureBare,
+  type TemperatureUnit,
+} from "@/utils/temperature";
 
 type ForecastListProps = {
   forecast?: ForecastDay[];
   theme: ProviderTheme;
+  temperatureUnit: TemperatureUnit;
 };
 
-export function ForecastList({ forecast, theme }: ForecastListProps) {
+export function ForecastList({
+  forecast,
+  theme,
+  temperatureUnit,
+}: ForecastListProps) {
   if (!forecast || forecast.length === 0) {
     return null;
   }
@@ -65,7 +74,7 @@ export function ForecastList({ forecast, theme }: ForecastListProps) {
               </Text>
 
               <Text style={[styles.tempMin, { color: theme.textSecondary }]}>
-                {Math.round(day.temperatureMinCelsius)}°
+                {formatTemperatureBare(day.temperatureMinCelsius, temperatureUnit)}
               </Text>
 
               <View
@@ -87,7 +96,7 @@ export function ForecastList({ forecast, theme }: ForecastListProps) {
               </View>
 
               <Text style={[styles.tempMax, { color: theme.textPrimary }]}>
-                {Math.round(day.temperatureMaxCelsius)}°
+                {formatTemperatureBare(day.temperatureMaxCelsius, temperatureUnit)}
               </Text>
             </View>
           );
@@ -147,7 +156,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginLeft: 8,
     textAlign: "right",
-    width: 32,
+    width: 36,
   },
   rangeTrack: {
     borderRadius: 999,
@@ -164,6 +173,6 @@ const styles = StyleSheet.create({
   tempMax: {
     fontSize: 13,
     fontWeight: "700",
-    width: 32,
+    width: 36,
   },
 });

@@ -13,13 +13,22 @@
       "bundleIdentifier": "com.anonymous.weather-provider-app",
       "bundleDisplayName": "Weather",
       "icon": "./assets/screenshots/weather.png",
-      "supportsTabletMode": true
+      "supportsTabletMode": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Allow Weather to use your location to fetch local weather conditions."
+      }
     },
     "android": {
       "package": "com.anonymous.weatherproviderapp"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Weather to use your location to fetch local weather."
+        }
+      ]
     ],
     "web": {
       "bundler": "metro"

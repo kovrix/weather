@@ -16,6 +16,12 @@ Production-style Expo + React Native weather app with modular provider adapters,
 - [Architecture](#architecture)
 - [Data Flow](#data-flow)
 - [State Management](#state-management)
+- [Features](#features)
+  - [Unit Toggle](#unit-toggle)
+  - [Search History](#search-history)
+  - [Geolocation](#geolocation)
+  - [Offline Support](#offline-support)
+  - [Web Layout](#web-layout)
 - [Path Aliases](#path-aliases)
 - [Fetch Resilience](#fetch-resilience)
 - [Error Boundary](#error-boundary)
@@ -36,6 +42,12 @@ npm start
 # press i for iOS simulator, a for Android emulator, w for web
 ```
 
+> **First run on iOS/Android after adding native dependencies** (expo-location, expo-network):
+> ```bash
+> npx expo prebuild --clean
+> npm run ios   # or npm run android
+> ```
+
 ---
 
 ## Local Setup
@@ -54,8 +66,6 @@ Check your versions:
 node -v
 npm -v
 ```
-
-If you are using a non-LTS Node version and see engine warnings, switch to Node 22 LTS to avoid tooling incompatibilities.
 
 ### Install Dependencies
 
@@ -91,7 +101,7 @@ The project follows a **feature-based, modular architecture**. All weather domai
 
 ```
 src/
-├── app/                    # App root, providers, error boundary
+├── app/                    # App root, providers, error boundary, web layout
 ├── components/             # Shared UI primitives
 ├── features/
 │   └── weather/
@@ -102,10 +112,11 @@ src/
 │       ├── hooks/          # useWeather — composes store + TanStack Query
 │       ├── model/          # TypeScript types, Zod validation, interfaces
 │       └── ui/             # Screen + feature components
+├── hooks/                  # Shared hooks (useNetworkStatus)
 ├── store/                  # Zustand store (user preferences)
 ├── theme/                  # Per-provider gradient and color themes
 ├── test/                   # Test helpers and test suites
-└── utils/                  # fetchJson, weatherIcons
+└── utils/                  # fetchJson, weatherIcons, temperature
 ```
 
 ### Key Patterns
@@ -123,35 +134,114 @@ src/
 ```
 User types location → presses "Search Weather"
   │
-  ├─ parseLocationInput()     Zod validation (trim, min/max length, character set)
+  ├─ parseLocationInput()        Zod validation (trim, min/max length, character set)
   │   └─ on failure: show inline error, abort
   │
-  ├─ setLastSearchedLocation  Persisted to AsyncStorage via Zustand
+  ├─ setLastSearchedLocation     API query string (city name or lat,lon)
+  ├─ lastSearchedDisplayName     Human-readable label shown in UI + history
+  ├─ addToLocationHistory        Prepend to persistent history (max 5, deduped)
   │
   └─ useWeather hook
       ├─ Reads selectedProvider + lastSearchedLocation from Zustand store
       ├─ Waits for hasHydrated = true (prevents duplicate startup fetches)
       └─ TanStack Query → provider.getWeather({ location })
-          ├─ fetchJson()          HTTP GET with 10s timeout + 2 retries
+          ├─ fetchJson()          HTTP GET — Promise.race timeout (10s) + 2 retries
           ├─ Adapter maps raw response via mapper function
           └─ Returns WeatherData  Cached for 5 minutes (staleTime)
+
+User presses "Use My Location"
+  │
+  ├─ Location.requestForegroundPermissionsAsync()
+  ├─ Location.getCurrentPositionAsync()       Gets lat/lon from device GPS
+  ├─ BigDataCloud reverse geocode API         Resolves city name (no API key needed)
+  ├─ lastSearchedLocation = "lat,lon"         Coords sent directly to adapters
+  └─ lastSearchedDisplayName = "City Name"    City name shown in UI + history
 ```
 
-On startup, `AppProviders` calls `hydrateWeatherPreferencesStore()` which reads `selectedProvider` and `lastSearchedLocation` from AsyncStorage. The query is gated on `hasHydrated`, so the app automatically re-fetches the last searched location after hydration — without triggering a duplicate fetch before it completes.
+On startup, `AppProviders` calls `hydrateWeatherPreferencesStore()` which reads preferences from AsyncStorage. The query is gated on `hasHydrated`, preventing duplicate fetches before hydration completes.
 
 ---
 
 ## State Management
 
-Two state layers work independently and complement each other:
-
 | Layer | Tool | What it stores | Persisted |
 |---|---|---|---|
-| User preferences | Zustand + AsyncStorage | `selectedProvider`, `lastSearchedLocation`, `hasHydrated` | Yes |
+| User preferences | Zustand + AsyncStorage | provider, location query, display name, history, unit | Yes |
 | Server state | TanStack Query | `WeatherData` per `[provider, location]` key | In-memory (5 min) |
-| UI state | React `useState` | Location text input, validation error message | No |
+| UI state | React `useState` | Input text, validation error, focus, locating spinner | No |
 
-The Zustand store exposes `setSelectedProvider`, `setLastSearchedLocation`, and `setHasHydrated`. The hydration flag is set to `true` inside `hydrateWeatherPreferencesStore` after AsyncStorage resolves — this is the signal that enables the TanStack Query fetch.
+### Persisted Zustand fields
+
+| Field | Type | Purpose |
+|---|---|---|
+| `selectedProvider` | `WeatherProviderId` | Last chosen provider |
+| `lastSearchedLocation` | `string` | Raw API query — city name or `lat,lon` |
+| `lastSearchedDisplayName` | `string` | Human-readable label shown in UI and history |
+| `locationHistory` | `string[]` | Up to 5 recent city names (deduped, newest first) |
+| `temperatureUnit` | `'celsius' \| 'fahrenheit'` | Preferred temperature unit |
+
+---
+
+## Features
+
+### Unit Toggle
+
+A `°C / °F` toggle sits in the search panel header. The selected unit is persisted to AsyncStorage and applied everywhere temperatures appear.
+
+- `src/utils/temperature.ts` exports `formatTemperature(celsius, unit)` and `formatTemperatureBare(celsius, unit)` (no unit suffix — used in the forecast list)
+- `WeatherCard` and `ForecastList` both accept a `temperatureUnit` prop
+- Conversion: `°F = (°C × 9/5) + 32`
+
+### Search History
+
+The last 5 searched locations are persisted and shown as suggestions when the input is focused.
+
+- Stored in Zustand under `locationHistory` (max 5 entries, case-insensitive deduplication)
+- History always stores the **city name** — never raw coordinates
+- Tapping a suggestion immediately submits that location
+- The list hides when the input loses focus (150ms debounce so taps register first)
+
+### Geolocation
+
+A crosshairs button next to the search input fetches weather for the device's current position.
+
+**Flow:**
+1. Requests `NSLocationWhenInUseUsageDescription` permission (iOS) or `ACCESS_FINE_LOCATION` (Android)
+2. Calls `Location.getCurrentPositionAsync()` to get coordinates
+3. Calls [BigDataCloud reverse geocoding API](https://api.bigdatacloud.net) to resolve the city name — no API key required
+4. Sends **coordinates** to the weather adapters for accuracy (avoids district/raion name lookup failures)
+5. Shows the **city name** in the UI and stores it in history
+
+If reverse geocoding fails (offline, unknown area), falls back to raw `lat,lon` string as both the query and display label.
+
+**Open-Meteo adapter** detects `lat,lon` format input and skips its geocoding step, using coordinates directly in the forecast URL.
+
+#### iOS Simulator setup
+
+The simulator has no GPS hardware. Set a simulated location before using the crosshairs button:
+
+`Simulator menu → Features → Location → Custom Location...`
+
+Enter any coordinates, for example Vinnytsia:
+- Latitude: `49.2328`
+- Longitude: `28.4682`
+
+### Offline Support
+
+`src/hooks/useNetworkStatus.ts` checks connectivity via `expo-network` and re-checks whenever the app returns to the foreground (`AppState` listener).
+
+- **Defaults to `true`** (optimistic) — avoids false negatives on iOS Simulator where `expo-network` can incorrectly report no connection
+- When offline + data cached: shows `"You're offline — showing cached data"` banner above the weather card
+- When offline + no data: shows `"No connection — connect to the internet and search"` banner
+- Network status is **informational only** — the loading state and fetch always proceed regardless, letting TanStack Query surface the error naturally if the device truly has no connection
+
+### Web Layout
+
+On desktop browsers the app renders in a **430px-wide phone-shaped container** centered on a dark background, matching the native mobile proportions.
+
+- Implemented entirely in `src/app/App.tsx` via `Platform.OS !== 'web'` check
+- Mobile builds (iOS/Android) are completely unaffected — zero overhead
+- Drop shadow frames the container on wide viewports
 
 ---
 
@@ -165,99 +255,73 @@ All cross-boundary imports use the `@/` alias which maps to `src/`. This is conf
 | `tsconfig.json` | `"baseUrl": ".", "paths": { "@/*": ["src/*"] }` |
 | `jest.config.js` | `moduleNameMapper: { "^@/(.*)$": "<rootDir>/src/$1" }` |
 
-**Usage:**
-
 ```ts
-// Instead of:
+// Before
 import { fetchJson } from "../../../../utils/fetchJson";
-import type { ProviderTheme } from "../../../theme/providerThemes";
 
-// Write:
+// After
 import { fetchJson } from "@/utils/fetchJson";
-import type { ProviderTheme } from "@/theme/providerThemes";
 ```
 
-Single-level relative imports within the same folder (e.g. `./WeatherCard`, `../model/types`) are kept as-is — they are already readable.
+Single-level relative imports within the same folder (`./WeatherCard`, `../model/types`) are kept as-is.
 
 ---
 
 ## Fetch Resilience
 
-`src/utils/fetchJson.ts` is the single HTTP utility used by all provider adapters. It provides:
+`src/utils/fetchJson.ts` is the single HTTP utility used by all provider adapters and the reverse geocoding call. It provides:
 
-- **10-second timeout** — each attempt is wrapped in an `AbortController`. If the server does not respond within 10 seconds the request is aborted and a clear error is thrown.
-- **2 automatic retries** — on network errors or timeouts, the request is retried up to twice with an increasing delay (500ms, then 1000ms). HTTP errors (4xx, 5xx) are not retried — they represent a definitive server response.
+- **10-second timeout** via `Promise.race` — if the server does not respond within 10 seconds a clear error is thrown. Uses `Promise.race` rather than `AbortController` for compatibility with React Native's native fetch on iOS (where `AbortController` signals do not propagate correctly through `NSURLSession`).
+- **2 automatic retries** with 500ms / 1000ms back-off on network/timeout failures. HTTP errors (4xx, 5xx) are not retried — they represent a definitive server response.
 
-```ts
-// Retry policy at a glance
-attempt 0: immediate
-attempt 1: wait 500ms  (network/timeout failures only)
-attempt 2: wait 1000ms (network/timeout failures only)
 ```
-
-This means a user on a flaky mobile connection gets silent recovery for transient blips, while a bad location name (404) still surfaces an error immediately.
+attempt 0: immediate
+attempt 1: wait 500ms   (network/timeout only)
+attempt 2: wait 1000ms  (network/timeout only)
+```
 
 ---
 
 ## Error Boundary
 
-`src/app/ErrorBoundary.tsx` is a React class component that catches any unhandled JavaScript errors thrown during render. It wraps the entire app in `App.tsx`:
-
-```tsx
-<ErrorBoundary>
-  <AppProviders>
-    <WeatherScreen />
-  </AppProviders>
-</ErrorBoundary>
-```
+`src/app/ErrorBoundary.tsx` is a React class component that catches any unhandled JavaScript errors thrown during render. It wraps the entire app in `App.tsx`.
 
 When an error is caught:
-- The error is logged to the console with its component stack.
-- A fallback screen is shown with the error message and a **Try again** button.
-- Pressing **Try again** resets `hasError` to `false`, which re-mounts the children and gives the app a chance to recover.
-
-This prevents the entire app from going blank on unexpected throws (e.g. a null-dereference in a component or an unhandled promise rejection that bubbles to the render tree).
+- The error is logged to the console with its component stack
+- A fallback screen shows the error message and a **Try again** button
+- **Try again** resets `hasError`, re-mounting the children and giving the app a chance to recover
 
 ---
 
 ## Weather Icons
 
-`src/utils/weatherIcons.ts` is the single source of truth for mapping weather condition strings to visual representations. It exports two functions:
+`src/utils/weatherIcons.ts` is the single source of truth for weather condition → icon mapping:
 
 ```ts
-// Returns a MaterialCommunityIcons glyph name — used by WeatherCard and ForecastList
-getWeatherIconName(condition: string): IconName
-
-// Returns an emoji string — used by the wttr.in mapper
-mapConditionToEmoji(condition: string): string
+getWeatherIconName(condition: string): IconName   // MaterialCommunityIcons glyph
+mapConditionToEmoji(condition: string): string    // emoji (used by wttr.in mapper)
 ```
-
-Both functions match against lowercased substrings (`thunder`, `snow`, `rain`, `drizzle`, `shower`, `fog`, `mist`, `cloud`, `overcast`, `clear`, `sun`, `hail`, `blizzard`) and fall back to a partly-cloudy icon/emoji for unrecognised conditions.
-
-Before this utility existed, identical matching logic was duplicated in `WeatherCard.tsx`, `ForecastList.tsx`, and `wttrMapper.ts`. Any change to icon mapping now happens in one place.
 
 ### Open-Meteo WMO Weather Codes
 
-`openMeteoMapper.ts` maps WMO weather interpretation codes to labels and emoji icons. The full set of 28 codes is covered:
+All 28 WMO weather interpretation codes are covered in `openMeteoMapper.ts`:
 
 | Code range | Conditions |
 |---|---|
 | 0–3 | Clear sky → Overcast |
 | 45, 48 | Fog, rime fog |
-| 51–57 | Drizzle (light/moderate/dense), freezing drizzle |
-| 61–67 | Rain (slight/moderate/heavy), freezing rain |
-| 71–77 | Snow (slight/moderate/heavy), snow grains |
-| 80–82 | Rain showers (slight/moderate/violent) |
-| 85–86 | Snow showers (slight/heavy) |
+| 51–57 | Drizzle, freezing drizzle |
+| 61–67 | Rain, freezing rain |
+| 71–77 | Snow, snow grains |
+| 80–82 | Rain showers |
+| 85–86 | Snow showers |
 | 95, 96, 99 | Thunderstorm, thunderstorm with hail |
-
-Any code not in this table falls back to `"Unknown conditions ☁️"` — but with full WMO coverage this should never occur in practice.
 
 ---
 
 ## Adding a New Provider
 
-1. Create `src/features/weather/api/providers/myProviderAdapter.ts` implementing `WeatherProvider`:
+1. Create `src/features/weather/api/providers/myProviderAdapter.ts`:
 
 ```ts
 import { fetchJson } from "@/utils/fetchJson";
@@ -274,29 +338,19 @@ export class MyProviderAdapter implements WeatherProvider {
 }
 ```
 
-2. Create `src/features/weather/api/mappers/myProviderMapper.ts` that converts the raw API shape to `Omit<WeatherData, "provider">`.
+2. Create `src/features/weather/api/mappers/myProviderMapper.ts` returning `Omit<WeatherData, "provider">`.
 
-3. Register the adapter in `src/features/weather/api/providerRegistry.ts`:
+3. Register in `src/features/weather/api/providerRegistry.ts`.
 
-```ts
-export const weatherProviderRegistry: WeatherProviderRegistry = {
-  openMeteo: new OpenMeteoAdapter(),
-  wttr: new WttrAdapter(),
-  myProvider: new MyProviderAdapter(),   // add this line
-};
-```
-
-4. Add the new provider id and label to `WEATHER_PROVIDER_OPTIONS` in `src/features/weather/model/types.ts`.
+4. Add id + label to `WEATHER_PROVIDER_OPTIONS` in `src/features/weather/model/types.ts`.
 
 5. Add a theme entry in `src/theme/providerThemes.ts`.
 
-No changes required anywhere else — the `ProviderToggle`, `useWeather`, and `WeatherScreen` components all read from the registry dynamically.
+No other changes needed — `ProviderToggle`, `useWeather`, and `WeatherScreen` all read from the registry dynamically.
 
 ---
 
 ## Testing
-
-Tests live in `src/test/` and use `jest-expo` + `@testing-library/react-native`.
 
 ```bash
 npm test
@@ -306,21 +360,25 @@ npm test
 
 | File | Purpose |
 |---|---|
-| `createTestQueryClient.ts` | Returns a `QueryClient` with `gcTime: 0` — disables caching between tests |
-| `renderWithProviders.tsx` | Wraps components in `QueryClientProvider` for UI tests |
+| `createTestQueryClient.ts` | `QueryClient` with `gcTime: 0` — disables caching between tests |
+| `renderWithProviders.tsx` | Wraps components in `QueryClientProvider` |
 
 ### Test suites
 
 | Suite | What it covers |
 |---|---|
-| `weatherValidation.test.ts` | Zod location schema (trim, empty, invalid characters) |
-| `providerAdapters.test.ts` | Open-Meteo and wttr.in adapter + mapper integration (mocked `fetch`) |
-| `useWeather.test.tsx` | Hydration gate, provider switching, TanStack Query behaviour |
-| `WeatherScreen.test.tsx` | Idle, validation error, loading, error, and success UI states |
+| `weatherValidation.test.ts` | Zod location schema |
+| `providerAdapters.test.ts` | Adapter + mapper integration (mocked `fetch`) |
+| `useWeather.test.tsx` | Hydration gate, provider switching |
+| `WeatherScreen.test.tsx` | Idle, loading, error, success UI states |
 
-### Testing a new adapter
+### Global mocks (`jest.setup.ts`)
 
-Adapters are tested by mocking `globalThis.fetch` and asserting the returned `WeatherData` shape. See `providerAdapters.test.ts` for the pattern.
+| Mock | Reason |
+|---|---|
+| `@react-native-async-storage/async-storage` | In-memory map, no native module needed |
+| `expo-network` | Returns `{ isConnected: true }` — avoids false offline state in tests |
+| `expo-location` | Returns granted permission + mock coordinates + mock reverse geocode result |
 
 ---
 
@@ -328,43 +386,46 @@ Adapters are tested by mocking `globalThis.fetch` and asserting the returned `We
 
 ```text
 .
-├── App.tsx                         Entry point (re-exports src/app/App.tsx)
-├── app.json
-├── babel.config.js                 Babel config — includes @/ alias via module-resolver
-├── jest.config.js                  Jest config — includes @/ moduleNameMapper
-├── jest.setup.ts                   Global mocks (AsyncStorage)
+├── App.tsx
+├── app.json                        Expo config — includes expo-location plugin + iOS infoPlist
+├── babel.config.js                 @/ alias via babel-plugin-module-resolver
+├── jest.config.js                  @/ moduleNameMapper
+├── jest.setup.ts                   AsyncStorage, expo-network, expo-location mocks
 ├── package.json
-├── tsconfig.json                   TypeScript config — includes @/ paths
+├── tsconfig.json                   @/ paths
 └── src
     ├── app
-    │   ├── App.tsx                 Root component — mounts ErrorBoundary + AppProviders
-    │   ├── ErrorBoundary.tsx       React class error boundary with fallback UI + retry
-    │   └── providers.tsx           QueryClient setup, store hydration on mount
+    │   ├── App.tsx                 Root — ErrorBoundary + web phone-frame layout
+    │   ├── ErrorBoundary.tsx       Class error boundary with fallback UI + retry
+    │   └── providers.tsx           QueryClient setup, store hydration
     ├── components
-    │   └── MetricPill.tsx          Shared label+value display pill
+    │   └── MetricPill.tsx          Shared label+value pill
     ├── features
     │   └── weather
     │       ├── api
     │       │   ├── mappers
-    │       │   │   ├── openMeteoMapper.ts   Normalises Open-Meteo response, maps all 28 WMO codes
-    │       │   │   └── wttrMapper.ts        Normalises wttr.in response
-    │       │   ├── providerRegistry.ts      Registry of available provider adapters
+    │       │   │   ├── openMeteoMapper.ts   Full 28 WMO codes
+    │       │   │   └── wttrMapper.ts
+    │       │   ├── providerRegistry.ts
     │       │   └── providers
-    │       │       ├── openMeteoAdapter.ts  Geocoding + forecast fetch via Open-Meteo API
-    │       │       └── wttrAdapter.ts       Forecast fetch via wttr.in API
+    │       │       ├── openMeteoAdapter.ts  Detects lat,lon input, skips geocoding
+    │       │       └── wttrAdapter.ts
     │       ├── hooks
-    │       │   └── useWeather.ts            Coordinates Zustand store + TanStack Query
+    │       │   └── useWeather.ts
     │       ├── model
-    │       │   ├── provider.ts              WeatherProvider interface, registry type
-    │       │   ├── types.ts                 WeatherData, ForecastDay, provider id/option types
-    │       │   └── validation.ts            Zod location schema + parseLocationInput helper
+    │       │   ├── provider.ts
+    │       │   ├── types.ts
+    │       │   └── validation.ts
     │       └── ui
-    │           ├── ForecastList.tsx         7-day forecast with temperature range bars
-    │           ├── ProviderToggle.tsx       Segmented control for switching providers
-    │           ├── WeatherCard.tsx          Current conditions card
-    │           └── WeatherScreen.tsx        Main screen — search, states, layout
+    │           ├── ForecastList.tsx         Forecast with temperatureUnit prop
+    │           ├── ProviderToggle.tsx
+    │           ├── UnitToggle.tsx           °C / °F toggle
+    │           ├── WeatherCard.tsx          Current conditions with temperatureUnit prop
+    │           └── WeatherScreen.tsx        Search, history, geolocation, offline banner
+    ├── hooks
+    │   └── useNetworkStatus.ts             expo-network + AppState listener
     ├── store
-    │   └── weatherPreferencesStore.ts      Zustand store — provider + location, AsyncStorage persistence
+    │   └── weatherPreferencesStore.ts      Zustand — provider, location, history, unit
     ├── test
     │   ├── WeatherScreen.test.tsx
     │   ├── createTestQueryClient.ts
@@ -373,10 +434,11 @@ Adapters are tested by mocking `globalThis.fetch` and asserting the returned `We
     │   ├── useWeather.test.tsx
     │   └── weatherValidation.test.ts
     ├── theme
-    │   └── providerThemes.ts               Gradient + accent colors per provider
+    │   └── providerThemes.ts
     └── utils
-        ├── fetchJson.ts                    HTTP GET with 10s timeout + 2-retry backoff
-        └── weatherIcons.ts                 Shared icon mapping — MaterialCommunityIcons glyph + emoji
+        ├── fetchJson.ts                    Promise.race timeout + 2-retry backoff
+        ├── temperature.ts                  formatTemperature / formatTemperatureBare
+        └── weatherIcons.ts                 getWeatherIconName / mapConditionToEmoji
 ```
 
 ---
@@ -395,17 +457,32 @@ Adapters are tested by mocking `globalThis.fetch` and asserting the returned `We
 
 ## Troubleshooting
 
-### Metro cache issues
+### Native module not found (expo-location / expo-network)
 
-If bundling behaves unexpectedly after config changes (e.g. adding a new Babel plugin or alias):
+These are native modules and require a full rebuild after install:
+
+```bash
+npx expo prebuild --clean
+npm run ios   # or npm run android
+```
+
+### Location permission denied on iOS
+
+The `NSLocationWhenInUseUsageDescription` key must be present in `Info.plist`. It is set via `app.json → ios.infoPlist` and applied during `expo prebuild`. If you see the error, run `npx expo prebuild --clean` and rebuild.
+
+### Location not working in iOS Simulator
+
+The simulator has no GPS. Set a simulated location first:
+
+`Simulator menu → Features → Location → Custom Location...`
+
+### Metro cache issues
 
 ```bash
 npx expo start -c
 ```
 
 ### Dependency issues
-
-If install or runtime errors appear after dependency changes:
 
 ```bash
 rm -rf node_modules package-lock.json
@@ -414,8 +491,6 @@ npm install
 
 ### iOS build issues
 
-If iOS fails to launch after native dependency updates:
-
 ```bash
 cd ios && pod install && cd ..
 npm run ios
@@ -423,15 +498,11 @@ npm run ios
 
 ### Android emulator not detected
 
-Ensure an emulator is running in Android Studio first, then rerun `npm run android`.
-
-### Port already in use
-
-Stop existing Metro/Expo processes and rerun `npm start`.
+Ensure an emulator is running in Android Studio first.
 
 ### Path alias not resolving
 
 If you see `Cannot find module '@/...'`:
-- In Metro/runtime: ensure `babel.config.js` has the `module-resolver` plugin and clear the Metro cache (`npx expo start -c`).
-- In TypeScript: ensure `tsconfig.json` has `baseUrl` and `paths` set correctly, then restart the TS language server.
-- In Jest: ensure `jest.config.js` has `moduleNameMapper` with `"^@/(.*)$": "<rootDir>/src/$1"`.
+- **Metro**: clear cache with `npx expo start -c`
+- **TypeScript**: verify `baseUrl` and `paths` in `tsconfig.json`, restart TS server
+- **Jest**: verify `moduleNameMapper` in `jest.config.js`
