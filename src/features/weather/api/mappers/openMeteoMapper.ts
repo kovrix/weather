@@ -1,4 +1,4 @@
-import type { WeatherData } from "../../model/types";
+import type { WeatherData } from "@/features/weather/model/types";
 
 type OpenMeteoCurrentResponse = {
   current: {

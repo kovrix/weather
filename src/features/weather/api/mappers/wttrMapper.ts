@@ -1,5 +1,5 @@
-import type { WeatherData } from "../../model/types";
-import { mapConditionToEmoji } from "../../../../utils/weatherIcons";
+import type { WeatherData } from "@/features/weather/model/types";
+import { mapConditionToEmoji } from "@/utils/weatherIcons";
 
 export type WttrResponse = {
   current_condition: Array<{

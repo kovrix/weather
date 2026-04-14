@@ -5,6 +5,14 @@ module.exports = function babelConfig(api) {
   return {
     presets: ["babel-preset-expo"],
     plugins: [
+      [
+        "module-resolver",
+        {
+          root: ["./src"],
+          alias: { "@": "./src" },
+          extensions: [".ts", ".tsx", ".js", ".jsx"],
+        },
+      ],
       function importMetaCompatPlugin({ types: t }) {
         return {
           name: "import-meta-compat-plugin",

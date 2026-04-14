@@ -1,5 +1,5 @@
-import { fetchJson } from "../../../../utils/fetchJson";
-import type { WeatherProvider } from "../../model/provider";
+import { fetchJson } from "@/utils/fetchJson";
+import type { WeatherProvider } from "@/features/weather/model/provider";
 import { mapWttrResponse, type WttrResponse } from "../mappers/wttrMapper";
 
 export class WttrAdapter implements WeatherProvider {

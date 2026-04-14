@@ -1,10 +1,10 @@
 import { Image, StyleSheet, Text, View } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 
-import { MetricPill } from "../../../components/MetricPill";
+import { MetricPill } from "@/components/MetricPill";
 import type { WeatherData } from "../model/types";
-import type { ProviderTheme } from "../../../theme/providerThemes";
-import { getWeatherIconName } from "../../../utils/weatherIcons";
+import type { ProviderTheme } from "@/theme/providerThemes";
+import { getWeatherIconName } from "@/utils/weatherIcons";
 
 type WeatherCardProps = {
   weather: WeatherData;

@@ -19,8 +19,8 @@ import { parseLocationInput } from "../model/validation";
 import { ForecastList } from "./ForecastList";
 import { ProviderToggle } from "./ProviderToggle";
 import { WeatherCard } from "./WeatherCard";
-import { getProviderTheme } from "../../../theme/providerThemes";
-import { useWeatherPreferencesStore } from "../../../store/weatherPreferencesStore";
+import { getProviderTheme } from "@/theme/providerThemes";
+import { useWeatherPreferencesStore } from "@/store/weatherPreferencesStore";
 
 type WeatherScreenProps = {
   registry?: WeatherProviderRegistry;

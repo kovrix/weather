@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
-import type { WeatherProviderRegistry } from "../features/weather/model/provider";
-import { WeatherScreen } from "../features/weather/ui/WeatherScreen";
+import type { WeatherProviderRegistry } from "@/features/weather/model/provider";
+import { WeatherScreen } from "@/features/weather/ui/WeatherScreen";
 import { renderWithProviders } from "./renderWithProviders";
 
 function createRegistry(

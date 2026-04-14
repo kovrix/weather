@@ -1,4 +1,4 @@
-import { parseLocationInput } from "../features/weather/model/validation";
+import { parseLocationInput } from "@/features/weather/model/validation";
 
 describe("locationSchema", () => {
   it("trims whitespace on valid input", () => {

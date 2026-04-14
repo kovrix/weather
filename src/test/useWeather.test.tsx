@@ -2,9 +2,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 
-import { useWeather } from "../features/weather/hooks/useWeather";
-import type { WeatherProviderRegistry } from "../features/weather/model/provider";
-import { useWeatherPreferencesStore } from "../store/weatherPreferencesStore";
+import { useWeather } from "@/features/weather/hooks/useWeather";
+import type { WeatherProviderRegistry } from "@/features/weather/model/provider";
+import { useWeatherPreferencesStore } from "@/store/weatherPreferencesStore";
 import { createTestQueryClient } from "./createTestQueryClient";
 
 describe("useWeather", () => {
