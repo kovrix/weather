@@ -4,6 +4,7 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { MetricPill } from "../../../components/MetricPill";
 import type { WeatherData } from "../model/types";
 import type { ProviderTheme } from "../../../theme/providerThemes";
+import { getWeatherIconName } from "../../../utils/weatherIcons";
 
 type WeatherCardProps = {
   weather: WeatherData;
@@ -77,25 +78,6 @@ export function WeatherCard({
       </Text>
     </View>
   );
-}
-
-function getWeatherIconName(condition: string) {
-  const lower = condition.toLowerCase();
-  if (lower.includes("thunder")) return "weather-lightning-rainy" as const;
-  if (lower.includes("snow")) return "weather-snowy" as const;
-  if (lower.includes("rain") || lower.includes("drizzle")) {
-    return "weather-rainy" as const;
-  }
-  if (lower.includes("fog") || lower.includes("mist")) {
-    return "weather-fog" as const;
-  }
-  if (lower.includes("cloud") || lower.includes("overcast")) {
-    return "weather-cloudy" as const;
-  }
-  if (lower.includes("clear") || lower.includes("sun")) {
-    return "weather-sunny" as const;
-  }
-  return "weather-partly-cloudy" as const;
 }
 
 const styles = StyleSheet.create({
