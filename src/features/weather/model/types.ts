@@ -2,12 +2,21 @@ export const WEATHER_PROVIDER_IDS = ["openMeteo", "wttr"] as const;
 
 export type WeatherProviderId = (typeof WEATHER_PROVIDER_IDS)[number];
 
+export type HourlyEntry = {
+  time: string;
+  temperatureCelsius: number;
+  weatherCondition: string;
+  icon: string;
+  windSpeedKph: number;
+};
+
 export type ForecastDay = {
   date: string;
   temperatureMaxCelsius: number;
   temperatureMinCelsius: number;
   weatherCondition: string;
   icon: string;
+  hourly?: HourlyEntry[];
 };
 
 export type WeatherData = {

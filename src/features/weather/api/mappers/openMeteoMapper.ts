@@ -1,4 +1,4 @@
-import type { WeatherData } from "@/features/weather/model/types";
+import type { WeatherData, HourlyEntry } from "@/features/weather/model/types";
 
 type OpenMeteoCurrentResponse = {
   current: {
@@ -12,6 +12,12 @@ type OpenMeteoCurrentResponse = {
     weather_code: number[];
     temperature_2m_max: number[];
     temperature_2m_min: number[];
+  };
+  hourly?: {
+    time: string[];
+    temperature_2m: number[];
+    weather_code: number[];
+    wind_speed_10m: number[];
   };
 };
 
@@ -78,6 +84,35 @@ export function mapOpenMeteoResponse(
     fetchedAt: new Date().toISOString(),
   };
 
+  // Pre-group hourly entries by date string (YYYY-MM-DD)
+  const hourlyByDate = new Map<string, HourlyEntry[]>();
+  if (response.hourly) {
+    for (let i = 0; i < response.hourly.time.length; i++) {
+      const isoTime = response.hourly.time[i]!;
+      const dateKey = isoTime.slice(0, 10); // "YYYY-MM-DD"
+      const hourCode = response.hourly.weather_code[i];
+      const hourDescriptor = weatherCodeMap[hourCode ?? -1] ?? {
+        label: "Unknown conditions",
+        icon: "☁️",
+      };
+
+      const entry: HourlyEntry = {
+        time: isoTime.slice(11, 16), // "HH:MM"
+        temperatureCelsius: response.hourly.temperature_2m[i] ?? 0,
+        weatherCondition: hourDescriptor.label,
+        icon: hourDescriptor.icon,
+        windSpeedKph: response.hourly.wind_speed_10m[i] ?? 0,
+      };
+
+      const list = hourlyByDate.get(dateKey);
+      if (list) {
+        list.push(entry);
+      } else {
+        hourlyByDate.set(dateKey, [entry]);
+      }
+    }
+  }
+
   if (response.daily) {
     result.forecast = response.daily.time.slice(0, 7).map((date, index) => {
       const code = response.daily?.weather_code[index];
@@ -92,6 +127,7 @@ export function mapOpenMeteoResponse(
         temperatureMinCelsius: response.daily?.temperature_2m_min[index] ?? 0,
         weatherCondition: dayDescriptor.label,
         icon: dayDescriptor.icon,
+        hourly: hourlyByDate.get(date),
       };
     });
   }
