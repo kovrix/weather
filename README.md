@@ -22,6 +22,7 @@ Production-style Expo + React Native weather app with modular provider adapters,
   - [Geolocation](#geolocation)
   - [Offline Support](#offline-support)
   - [Web Layout](#web-layout)
+  - [Hourly Forecast](#hourly-forecast)
 - [Path Aliases](#path-aliases)
 - [Fetch Resilience](#fetch-resilience)
 - [Error Boundary](#error-boundary)
@@ -121,7 +122,7 @@ src/
 
 ### Key Patterns
 
-**Adapter pattern** — each provider (Open-Meteo, wttr.in) implements the `WeatherProvider` interface. Consumers never reference a concrete adapter directly; they go through the `weatherProviderRegistry`. Adding a third provider means creating one adapter file and one mapper file — nothing else changes.
+**Adapter pattern** — each provider (Open-Meteo, wttr.in, MET Norway) implements the `WeatherProvider` interface. Consumers never reference a concrete adapter directly; they go through the `weatherProviderRegistry`. Adding a new provider means creating one adapter file and one mapper file — nothing else changes.
 
 **Mapper pattern** — adapters delegate response normalization to a dedicated mapper function. The mapper converts the provider-specific shape into the shared `WeatherData` domain model. This keeps adapters thin and mappers independently testable.
 
@@ -214,7 +215,7 @@ A crosshairs button next to the search input fetches weather for the device's cu
 
 If reverse geocoding fails (offline, unknown area), falls back to raw `lat,lon` string as both the query and display label.
 
-**Open-Meteo adapter** detects `lat,lon` format input and skips its geocoding step, using coordinates directly in the forecast URL.
+**Open-Meteo and MET Norway adapters** detect `lat,lon` format input and skip their geocoding step, using coordinates directly in the forecast URL.
 
 #### iOS Simulator setup
 
@@ -242,6 +243,16 @@ On desktop browsers the app renders in a **430px-wide phone-shaped container** c
 - Implemented entirely in `src/app/App.tsx` via `Platform.OS !== 'web'` check
 - Mobile builds (iOS/Android) are completely unaffected — zero overhead
 - Drop shadow frames the container on wide viewports
+
+### Hourly Forecast
+
+The 7-day forecast card includes today as the first row (expanded by default) and supports tapping any day to reveal a horizontal scrollable strip of hourly entries.
+
+- **Open-Meteo** and **MET Norway** provide full 24-hour breakdowns per day
+- **wttr.in** provides no hourly data — rows for that provider are not tappable
+- Today's hourly strip is pre-filtered to the current hour and later; past hours are hidden
+- Each hourly card shows: time (`HH:MM`), weather icon, temperature, wind speed in km/h
+- A chevron (`∨` / `∧`) on the right of each row indicates it is expandable
 
 ---
 
@@ -273,6 +284,7 @@ Single-level relative imports within the same folder (`./WeatherCard`, `../model
 
 - **10-second timeout** via `Promise.race` — if the server does not respond within 10 seconds a clear error is thrown. Uses `Promise.race` rather than `AbortController` for compatibility with React Native's native fetch on iOS (where `AbortController` signals do not propagate correctly through `NSURLSession`).
 - **2 automatic retries** with 500ms / 1000ms back-off on network/timeout failures. HTTP errors (4xx, 5xx) are not retried — they represent a definitive server response.
+- **Optional headers** via a second `options` argument — used by the MET Norway adapter to send the required `User-Agent` header.
 
 ```
 attempt 0: immediate
@@ -316,6 +328,20 @@ All 28 WMO weather interpretation codes are covered in `openMeteoMapper.ts`:
 | 80–82 | Rain showers |
 | 85–86 | Snow showers |
 | 95, 96, 99 | Thunderstorm, thunderstorm with hail |
+
+### MET Norway Symbol Codes
+
+`metNorwayMapper.ts` maps 40+ MET Norway symbol codes. Each code has an optional `_day` / `_night` / `_polartwilight` suffix that is stripped before lookup. Examples:
+
+| Base code | Label | Code variants |
+|---|---|---|
+| `clearsky` | Clear sky | `clearsky_day`, `clearsky_night`, `clearsky_polartwilight` |
+| `partlycloudy` | Partly cloudy | `partlycloudy_day`, `partlycloudy_night` |
+| `rainshowers` | Rain showers | `rainshowers_day`, `rainshowers_night` |
+| `heavysnow` | Heavy snow | *(no suffix)* |
+| `thunderstorm` | Thunderstorm | *(no suffix)* |
+
+Wind speed from MET Norway is in m/s and is converted to km/h (`× 3.6`) in the mapper.
 
 ---
 
@@ -404,10 +430,12 @@ npm test
     │   └── weather
     │       ├── api
     │       │   ├── mappers
-    │       │   │   ├── openMeteoMapper.ts   Full 28 WMO codes
+    │       │   │   ├── metNorwayMapper.ts   40+ symbol codes, m/s→km/h, hourly grouping
+    │       │   │   ├── openMeteoMapper.ts   Full 28 WMO codes, hourly grouping
     │       │   │   └── wttrMapper.ts
     │       │   ├── providerRegistry.ts
     │       │   └── providers
+    │       │       ├── metNorwayAdapter.ts  Open-Meteo geocoding, User-Agent header
     │       │       ├── openMeteoAdapter.ts  Detects lat,lon input, skips geocoding
     │       │       └── wttrAdapter.ts
     │       ├── hooks
@@ -417,7 +445,7 @@ npm test
     │       │   ├── types.ts
     │       │   └── validation.ts
     │       └── ui
-    │           ├── ForecastList.tsx         Forecast with temperatureUnit prop
+    │           ├── ForecastList.tsx         7-day forecast, tap-to-expand hourly
     │           ├── ProviderToggle.tsx
     │           ├── UnitToggle.tsx           °C / °F toggle
     │           ├── WeatherCard.tsx          Current conditions with temperatureUnit prop

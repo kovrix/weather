@@ -39,7 +39,9 @@ src/
 
 ### Provider / Adapter Pattern
 
-Weather sources (Open-Meteo, wttr.in) implement the `WeatherProvider` interface. Each lives in `src/features/weather/api/providers/` and delegates normalization to a mapper in `src/features/weather/api/mappers/`. A `weatherProviderRegistry` object maps `WeatherProviderId` strings to provider instances. Adding a provider requires only a new adapter + mapper + registry entry.
+Three weather sources (Open-Meteo, wttr.in, MET Norway) implement the `WeatherProvider` interface. Each lives in `src/features/weather/api/providers/` and delegates normalization to a mapper in `src/features/weather/api/mappers/`. A `weatherProviderRegistry` object maps `WeatherProviderId` strings to provider instances. Adding a provider requires only a new adapter + mapper + registry entry + theme.
+
+`fetchJson` accepts an optional `{ headers }` second argument — used by MET Norway to send the required `User-Agent` header.
 
 ### State Layers
 
@@ -70,7 +72,11 @@ User input → Zod validation (parseLocationInput)
 
 ### Geolocation
 
-Permission → GPS coordinates → BigDataCloud reverse geocode (no key needed) → city name for display/history, raw `"lat,lon"` string sent to adapters. Open-Meteo adapter detects `"lat,lon"` input and skips its internal geocoding step.
+Permission → GPS coordinates → BigDataCloud reverse geocode (no key needed) → city name for display/history, raw `"lat,lon"` string sent to adapters. Open-Meteo and MET Norway adapters detect `"lat,lon"` input and skip their internal geocoding step.
+
+### Hourly Forecast
+
+`ForecastDay.hourly?: HourlyEntry[]` carries per-hour data. Open-Meteo fetches `&hourly=temperature_2m,weather_code,wind_speed_10m`; MET Norway parses its timeseries. wttr.in provides no hourly data. `ForecastList` shows today expanded by default, filters past hours for today, and suppresses the expand chevron when `hourly` is empty.
 
 ### Web Layout
 
