@@ -14,7 +14,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   );
 }
 
-export async function fetchJson<T>(url: string): Promise<T> {
+export async function fetchJson<T>(
+  url: string,
+  options?: { headers?: Record<string, string> },
+): Promise<T> {
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -23,7 +26,10 @@ export async function fetchJson<T>(url: string): Promise<T> {
     }
 
     try {
-      const response = await withTimeout(fetch(url), FETCH_TIMEOUT_MS);
+      const response = await withTimeout(
+        fetch(url, options?.headers ? { headers: options.headers } : undefined),
+        FETCH_TIMEOUT_MS,
+      );
 
       if (!response.ok) {
         throw new Error(`Request failed with status ${response.status}.`);

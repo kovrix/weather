@@ -40,6 +40,11 @@ function createRegistry(
           fetchedAt: "2026-03-27T12:02:00.000Z",
         }),
     },
+    metNorway: {
+      id: "metNorway",
+      displayName: "MET Norway",
+      getWeather: jest.fn(),
+    },
   } satisfies WeatherProviderRegistry;
 }
 
