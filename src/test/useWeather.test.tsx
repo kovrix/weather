@@ -41,6 +41,11 @@ describe("useWeather", () => {
         displayName: "wttr.in",
         getWeather: wttrGetWeather,
       },
+      metNorway: {
+        id: "metNorway",
+        displayName: "MET Norway",
+        getWeather: jest.fn(),
+      },
     } satisfies WeatherProviderRegistry;
 
     const queryClient = createTestQueryClient();
@@ -109,6 +114,11 @@ describe("useWeather", () => {
         id: "wttr",
         displayName: "wttr.in",
         getWeather: wttrGetWeather,
+      },
+      metNorway: {
+        id: "metNorway",
+        displayName: "MET Norway",
+        getWeather: jest.fn(),
       },
     } satisfies WeatherProviderRegistry;
 

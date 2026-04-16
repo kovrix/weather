@@ -1,4 +1,4 @@
-export const WEATHER_PROVIDER_IDS = ["openMeteo", "wttr"] as const;
+export const WEATHER_PROVIDER_IDS = ["openMeteo", "wttr", "metNorway"] as const;
 
 export type WeatherProviderId = (typeof WEATHER_PROVIDER_IDS)[number];
 
@@ -51,5 +51,10 @@ export const WEATHER_PROVIDER_OPTIONS: WeatherProviderOption[] = [
     id: "wttr",
     label: "wttr.in",
     description: "Compact JSON weather feed",
+  },
+  {
+    id: "metNorway",
+    label: "MET Norway",
+    description: "Norwegian Meteorological Institute",
   },
 ];
